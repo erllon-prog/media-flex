@@ -379,10 +379,17 @@ function renderLista(sorted, byId){
 /* ---------- dados (Supabase) ---------- */
 const fromRow=r=>({id:r.id, data:r.data, km:Number(r.km), litros:Number(r.litros), total:r.total==null?null:Number(r.total),
   precoLitro:r.preco_litro==null?null:Number(r.preco_litro), comb:r.comb, cheio:!!r.cheio});
+function erroTexto(acao,error){
+  const m=String(error?.message||"");
+  if(/fetch|network|load failed|offline/i.test(m)) return `Não consegui ${acao}: sem conexão com o servidor. Tente de novo em instantes.`;
+  if(error?.code==="42501") return `Não consegui ${acao}: o servidor recusou o acesso à tabela (permissão). Avise o administrador do app.`;
+  if(/jwt|token|auth/i.test(m)) return `Não consegui ${acao}: sua sessão expirou. Toque em Sair e entre de novo.`;
+  return `Não consegui ${acao}. Erro do servidor: ${m||error?.code||"desconhecido"}`;
+}
 async function carregar(){
   const {data,error}=await sb.from("abastecimentos").select("id,data,km,litros,total,preco_litro,comb,cheio").order("km",{ascending:true});
   loaded=true;
-  if(error){ msg("Não consegui carregar o histórico. Verifique a conexão e recarregue.","bad"); render(); return; }
+  if(error){ msg(erroTexto("carregar o histórico",error),"bad"); render(); return; }
   entries=data.map(fromRow); render();
 }
 
@@ -423,7 +430,7 @@ $("#salvar").onclick=async()=>{
   const btn=$("#salvar"); btn.disabled=true; const eraEdicao=!!editingId;
   const q=eraEdicao? sb.from("abastecimentos").update(row).eq("id",editingId) : sb.from("abastecimentos").insert(row);
   const {error}=await q; btn.disabled=false;
-  if(error){ msg(error.code==="23505"?`Já existe um abastecimento com ${fKm(km)} km.`:"Não consegui salvar. Verifique a conexão e tente de novo.","bad"); return; }
+  if(error){ msg(error.code==="23505"?`Já existe um abastecimento com ${fKm(km)} km.`:erroTexto("salvar",error),"bad"); return; }
   resetForm(); msg(eraEdicao?"Atualizado.":"Abastecimento salvo.","ok"); setTimeout(()=>msg(),2500); carregar();
 };
 
@@ -437,7 +444,7 @@ $("#lista").addEventListener("click",async ev=>{
     if(pendingDel!==id){ pendingDel=id; clearTimeout(pendingTimer); pendingTimer=setTimeout(()=>{pendingDel=null;render();},4000); render(); return; }
     pendingDel=null; clearTimeout(pendingTimer);
     const {error}=await sb.from("abastecimentos").delete().eq("id",id);
-    if(error) return msg("Não consegui excluir. Tente de novo.","bad");
+    if(error) return msg(erroTexto("excluir",error),"bad");
     if(editingId===id) resetForm(); carregar(); }
 });
 document.querySelectorAll(".period button").forEach(b=>b.onclick=()=>{ periodo=+b.dataset.p;
