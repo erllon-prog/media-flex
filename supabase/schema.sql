@@ -20,6 +20,11 @@ create index if not exists abastecimentos_user_km on public.abastecimentos (user
 
 alter table public.abastecimentos enable row level security;
 
+-- Permissão de acesso pela API (sem isso o app recebe "permission denied for table").
+-- O RLS abaixo continua limitando cada usuário aos próprios registros.
+grant select, insert, update, delete on table public.abastecimentos to authenticated;
+revoke all on table public.abastecimentos from anon;
+
 -- Cada pessoa vê e altera somente os próprios abastecimentos
 drop policy if exists "abast_select_own" on public.abastecimentos;
 drop policy if exists "abast_insert_own" on public.abastecimentos;
