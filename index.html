@@ -461,26 +461,55 @@ function tileState(t,url,text,kind){ const el=$("#tile-"+t);
   const s=document.createElement("span"); s.className="state "+(kind||""); s.textContent=text; el.appendChild(s);
   if(kind!=="busy"){ const again=document.createElement("span"); again.style.position="relative"; again.textContent="toque para refazer"; el.appendChild(again); }
   el.appendChild(input); }
+/* Reduz a foto no próprio celular antes de enviar (foto do iPhone tem 3–8 MB; enviada inteira, a conexão cai).
+   Usa <img> + canvas, que no Safari já respeita a rotação da foto. Nunca envia o arquivo original. */
+function carregarImg(file){
+  return new Promise((res,rej)=>{ const u=URL.createObjectURL(file), img=new Image();
+    img.onload=()=>res({img,u}); img.onerror=()=>{URL.revokeObjectURL(u); rej(new Error("formato de foto não suportado"));}; img.src=u; });
+}
 async function prep(file){
-  // reduz para ~1600px em JPEG (fotos do iPhone chegam com vários MB)
-  const toB64=blob=>new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=rej; r.readAsDataURL(blob);});
-  try{ const bmp=await createImageBitmap(file,{imageOrientation:"from-image"}); const m=1600, sc=Math.min(1,m/Math.max(bmp.width,bmp.height));
-    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*sc); c.height=Math.round(bmp.height*sc);
-    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
-    const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",.85)); if(blob) return {blob, b64:await toB64(blob), mime:"image/jpeg"};
-  }catch(e){}
-  return {blob:file, b64:await toB64(file), mime:file.type||"image/jpeg"};
+  const toB64=blob=>new Promise((res,rej)=>{const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("falha ao ler a foto")); r.readAsDataURL(blob);});
+  const {img,u}=await carregarImg(file);
+  try{
+    const w=img.naturalWidth, h=img.naturalHeight; if(!w||!h) throw new Error("foto vazia");
+    for(const [lado,q] of [[1280,.8],[1024,.7],[800,.6]]){
+      const sc=Math.min(1,lado/Math.max(w,h)), c=document.createElement("canvas");
+      c.width=Math.round(w*sc); c.height=Math.round(h*sc);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      const blob=await new Promise(r=>c.toBlob(r,"image/jpeg",q));
+      c.width=c.height=0; // libera memória no iPhone
+      if(blob && blob.size<=900*1024) return {blob, b64:await toB64(blob), mime:"image/jpeg"};
+    }
+    throw new Error("não consegui reduzir a foto");
+  } finally { URL.revokeObjectURL(u); }
+}
+async function chamarLeitura(payload){
+  const ctrl=new AbortController(), timer=setTimeout(()=>ctrl.abort(),45000);
+  try{
+    const {data:{session:s}}=await sb.auth.getSession();
+    const r=await fetch(CFG.SUPABASE_URL+"/functions/v1/ler-foto",{method:"POST",signal:ctrl.signal,
+      headers:{"Content-Type":"application/json",apikey:CFG.SUPABASE_ANON_KEY,Authorization:"Bearer "+(s?.access_token||"")},
+      body:JSON.stringify(payload)});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok) return {erro:j.erro||("erro "+r.status), status:r.status};
+    return j;
+  }catch(e){ return {erro:e.name==="AbortError"?"demorou demais, tente de novo":"sem conexão com o servidor"}; }
+  finally{ clearTimeout(timer); }
 }
 async function ler(t,file){
   if(!file) return;
   if(!session){ msg("Entre com sua conta para ler as fotos.","bad"); return; }
-  const {blob,b64,mime}=await prep(file); const url=URL.createObjectURL(blob);
+  tileState(t,null,"preparando foto…","busy");
+  let p; try{ p=await prep(file); }catch(e){ tileState(t,null,e.message||"foto não suportada","err"); return; }
+  const {blob,b64,mime}=p; const url=URL.createObjectURL(blob);
   tileState(t,url,"lendo…","busy");
   const ultimoKm=entries.reduce((a,e)=>Math.max(a,e.km),0)||undefined;
-  const {data:r,error}=await sb.functions.invoke("ler-foto",{body:{tipo:t, imagem:b64, mime, ultimoKm}});
-  if(error||!r||r.erro){
-    let txt="não consegui ler";
-    try{ const det=error?.context ? await error.context.json() : r; if(det?.erro?.includes("limite")) txt="limite grátis, aguarde"; }catch(_){}
+  const r=await chamarLeitura({tipo:t, imagem:b64, mime, ultimoKm});
+  if(!r||r.erro){
+    let txt=r?.erro||"não consegui ler";
+    if(/limite/.test(txt)) txt="limite grátis, aguarde 1 min";
+    else if(r?.status===401) txt="sessão expirou, entre de novo";
+    else if(r?.status>=500) console.warn("ler-foto", r);
     tileState(t,url,txt,"err"); return;
   }
   if(t==="painel"){

@@ -1,5 +1,5 @@
 // Cache só da "casca" do app; dados e leitura de foto sempre vão para a rede.
-const CACHE = "media-flex-v2";
+const CACHE = "media-flex-v3";
 const SHELL = ["./", "./index.html", "./config.js", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
