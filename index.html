@@ -15,7 +15,7 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="../comum/nucleo.css?v=1">
-  <link rel="stylesheet" href="app.css?v=4">
+  <link rel="stylesheet" href="app.css?v=5">
 </head>
 <body>
   <section id="view-app" hidden>
@@ -58,10 +58,13 @@
           <label class="link">ou escolher foto da nota<input type="file" accept="image/*" id="g-nota"></label>
         </div>
 
-        <div class="seg seg-2 mf-comb" role="group" aria-label="Combustível">
+        <div class="seg mf-comb" role="group" aria-label="Combustível">
           <button type="button" class="eth active" id="b-etanol" aria-pressed="true">Etanol</button>
           <button type="button" class="gas" id="b-gasolina" aria-pressed="false">Gasolina</button>
+          <button type="button" class="mis" id="b-misto" aria-pressed="false">Misto</button>
         </div>
+
+        <p class="muted small mf-nota" id="dicaMisto" hidden>Misto: etanol e gasolina juntos no mesmo tanque. A média muda com a proporção, então tente repetir sempre parecido (ex.: metade e metade).</p>
 
         <div class="mf-fields">
           <label>KM no painel<input id="f-km" inputmode="numeric" autocomplete="off" placeholder="0"></label>
@@ -106,6 +109,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../comum/config.js?v=1"></script>
   <script src="../comum/nucleo.js?v=1"></script>
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

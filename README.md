@@ -1,6 +1,6 @@
 # Média Flex
 
-PWA para medir o consumo do carro com duas fotos (painel e nota do posto) e descobrir se etanol ou gasolina sai mais barato **no seu carro**, em R$/km.
+PWA para medir o consumo do carro com duas fotos (painel e nota do posto) e descobrir se etanol, gasolina ou misto sai mais barato **no seu carro**, em R$/km.
 
 Mesmo esquema do app de contas: GitHub Pages (repositório público) + Supabase plano grátis + login com Google. A leitura das fotos usa o Gemini Flash na cota gratuita, chamado por uma Edge Function do Supabase para a chave ficar fora do repositório.
 
@@ -9,6 +9,7 @@ Mesmo esquema do app de contas: GitHub Pages (repositório público) + Supabase 
 - A média é calculada entre **dois abastecimentos com tanque cheio**: km rodados ÷ litros colocados para encher de novo.
 - Abastecimento parcial (chave "Tanque cheio" desligada) soma os litros no próximo tanque cheio.
 - O trecho é atribuído ao combustível que estava no tanque, ou seja, o do tanque cheio anterior.
+- **Misto** (v5) é um terceiro combustível: etanol e gasolina juntos no mesmo tanque. Tem média e R$/km próprios e entra na comparação. Como a média depende da proporção, vale repetir sempre parecido (ex.: metade e metade).
 - O primeiro trecho depois de trocar de combustível fica marcado como transição (tanque com mistura). Ele sai da média quando há pelo menos dois trechos limpos daquele combustível.
 - **R$/km** = último preço por litro pago ÷ média km/L. O mais barato ganha o selo "compensa".
 - **Ponto de equilíbrio do seu carro** = km/L do etanol ÷ km/L da gasolina. Substitui a regra genérica dos 70%.
@@ -16,6 +17,7 @@ Mesmo esquema do app de contas: GitHub Pages (repositório público) + Supabase 
 ## Publicar (uma vez)
 
 1. **Tabela**: no Supabase do app de contas, abra o SQL Editor e rode `supabase/schema.sql`.
+   - Quem já tem a tabela: rode também `supabase/migracao-misto.sql` (libera o valor `misto` na coluna `comb`).
 2. **Chave do Gemini (grátis)**: em https://aistudio.google.com crie uma API key.
 3. **Edge Function**:
    - Supabase → Edge Functions → Deploy a new function → via Editor, nome `ler-foto`, cole `supabase/functions/ler-foto/index.ts` e faça o deploy. Em Settings, deixe "Verify JWT with legacy secret" desligado: o código já confere o login.
@@ -34,6 +36,7 @@ Mesmo esquema do app de contas: GitHub Pages (repositório público) + Supabase 
 | `config.js` | URL e anon key do Supabase |
 | `manifest.webmanifest`, `sw.js`, ícones | Instalação como app no celular |
 | `supabase/schema.sql` | Tabela `abastecimentos` com RLS (cada um vê só os seus) |
+| `supabase/migracao-misto.sql` | Atualização da tabela já existente para aceitar `misto` (v5) |
 | `supabase/functions/ler-foto/index.ts` | Lê KM do painel e litros/valor/preço/combustível/data da nota |
 
 ## Observações

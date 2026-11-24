@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSAO = 4;
+  const VERSAO = 5;
 
   // ---------------------------------------------------------------- núcleo comum (login, amigos, usuários, avisos)
   const nucleo = Nucleo.iniciar({
@@ -10,19 +10,18 @@
     url: "https://erllon-prog.github.io/media-flex/",
     icone: "icon-192.png",
     versao: VERSAO,
-    descricao: "para medir o consumo do carro e saber se etanol ou gasolina compensa",
+    descricao: "para medir o consumo do carro e saber se etanol, gasolina ou misto compensa",
     privacidade: "Pronto, só você vê os seus abastecimentos.",
     textoPrimeiraVez: "Primeira vez? É só entrar com o Google. Se você já usa o app Contas, é o mesmo login.",
     amigosTexto: "Seus amigos são os mesmos do app <b>Contas</b>. No Média Flex cada um vê só os próprios abastecimentos.",
     novidades: {
-      id: "media-flex-4",
-      titulo: "O Média Flex foi atualizado",
+      id: "media-flex-5",
+      titulo: "Novo: combustível Misto",
       itens: [
-        "A leitura das fotos ficou mais rápida: a foto é reduzida no celular antes de enviar.",
-        "Mesmo login, amigos e visual do app Contas. Veja em <b>⋯ → Nossos apps</b>.",
-        "Dá para compartilhar o app com amigos em <b>⋯ → Compartilhar o app</b>."
+        "Agora dá para registrar o abastecimento como <b>Misto</b> (etanol e gasolina juntos no tanque).",
+        "O placar compara Etanol, Gasolina e Misto em km/L e em R$/km, para você ver se a média melhora."
       ],
-      dica: "Se algo parecer estranho, feche o app e abra de novo."
+      dica: "Para a comparação ser justa, tente repetir sempre a mesma proporção no misto."
     },
     novidadesAlvo: ".content",
     aoEntrar() { carregar(); },
@@ -34,7 +33,7 @@
   const $ = nucleo.$;
 
   // ---------------------------------------------------------------- estado
-  const NOMES = { etanol: "Etanol", gasolina: "Gasolina", misto: "Mistura" };
+  const NOMES = { etanol: "Etanol", gasolina: "Gasolina", misto: "Misto", mistura: "Tanque misturado" };
   let entries = [], loaded = false, editingId = null, comb = "etanol", periodo = 0, warnedKm = null, pendingDel = null, pendingTimer = null;
 
   // ---------------------------------------------------------------- formatação
@@ -68,7 +67,7 @@
         const dist = e.km - base.km;
         if (dist > 0 && acc > 0) {
           const kml = dist / acc, preco = base.precoLitro || null;
-          const seg = { endId: e.id, dist, litros: acc, kml, comb: mixed ? "misto" : base.comb, preco, custoKm: preco ? preco / kml : null,
+          const seg = { endId: e.id, dist, litros: acc, kml, comb: base.comb === "misto" ? "misto" : (mixed ? "mistura" : base.comb), preco, custoKm: preco ? preco / kml : null,
             transicao: !!(prevBaseComb && prevBaseComb !== base.comb), data: e.data };
           segs.push(seg); byId[e.id] = seg;
         }
@@ -112,12 +111,16 @@
         <li>Abasteça gasolina algumas vezes para o app comparar com o etanol.</li></ol></div>`;
       return;
     }
-    const sE = stats(segs, "etanol"), sG = stats(segs, "gasolina");
-    const pE = ultimoPreco(sorted, "etanol"), pG = ultimoPreco(sorted, "gasolina");
-    const cE = sE && pE ? pE.p / sE.kml : (sE ? sE.custoHist : null), cG = sG && pG ? pG.p / sG.kml : (sG ? sG.custoHist : null);
-    const win = cE != null && cG != null ? (cE <= cG ? "etanol" : "gasolina") : null;
+    const sE = stats(segs, "etanol"), sG = stats(segs, "gasolina"), sM = stats(segs, "misto");
+    const pE = ultimoPreco(sorted, "etanol"), pG = ultimoPreco(sorted, "gasolina"), pM = ultimoPreco(sorted, "misto");
+    const custo = (s, p) => s && p ? p.p / s.kml : (s ? s.custoHist : null);
+    const cE = custo(sE, pE), cG = custo(sG, pG), cM = custo(sM, pM);
+    const temMisto = !!sM || sorted.some((e) => e.comb === "misto");
+    $("#t-placar").textContent = temMisto ? "Etanol x Gasolina x Misto" : "Etanol x Gasolina";
+    const cands = [["etanol", cE], ["gasolina", cG], ["misto", cM]].filter((x) => x[1] != null).sort((a, b) => a[1] - b[1]);
+    const win = cands.length >= 2 ? cands[0][0] : null;
     const card = (fuel, s, p, c) => {
-      const cls = fuel === "etanol" ? "eth" : "gas";
+      const cls = { etanol: "eth", gasolina: "gas", misto: "mis" }[fuel];
       if (!s) return `<div class="mf-fuel ${cls} empty"><span class="name">${NOMES[fuel]}</span><span class="big">—</span>
         <span class="line">${sorted.some((e) => e.comb === fuel && e.cheio) ? "Falta o próximo tanque cheio para medir." : "Sem medição ainda."}</span>${p ? `<span class="line">Último preço <b>${fR(p.p)}</b></span>` : ""}</div>`;
       return `<div class="mf-fuel ${cls}">${win === fuel ? '<span class="badge-win">compensa</span>' : ""}<span class="name">${NOMES[fuel]}</span>
@@ -126,28 +129,39 @@
         ${p ? `<span class="line">Preço ref. <b>${fR(p.p)}</b> em ${fData(p.data)}</span>` : ""}</div>`;
     };
     let v = "";
+    const pct = (a, b) => { const x = (a / b - 1) * 100; return `${x >= 0 ? "+" : "−"}${fN(Math.abs(x), 0)}%`; };
+    let vm = "";
+    if (sM && (sE || sG)) {
+      const vs = [sE && `<b>${pct(sM.kml, sE.kml)}</b> que o etanol`, sG && `<b>${pct(sM.kml, sG.kml)}</b> que a gasolina`].filter(Boolean).join(" e ");
+      const puros = [cE, cG].filter((x) => x != null), melhor = puros.length ? Math.min(...puros) : null;
+      const dc = melhor != null && cM != null ? (cM / melhor - 1) * 100 : null;
+      vm = `<span>O misto rende ${vs} em km/L.</span>${dc != null ? `<span>Em R$/km ele sai <b>${fN(Math.abs(dc), 0)}% ${dc <= 0 ? "mais barato" : "mais caro"}</b> que o melhor combustível puro.</span>` : ""}`;
+    }
+    const titulo = win ? `Abasteça ${NOMES[win].toLowerCase()}` : "";
     if (sE && sG) {
       const be = sE.kml / sG.kml; const r = pE && pG ? pE.p / pG.p : null;
       const pos = (x) => Math.max(2, Math.min(98, (x - 0.5) / 0.5 * 100));
-      v = `<div class="mf-verdict"><strong>${win === "etanol" ? "Abasteça etanol" : "Abasteça gasolina"}</strong>
+      v = `<div class="mf-verdict"><strong>${titulo}</strong>${vm}
         <span>No seu carro o etanol rende <b>${fN(be * 100, 0)}%</b> da gasolina. Ele compensa enquanto custar até <b>${fN(be * 100, 0)}%</b> do preço dela.</span>
         ${r != null ? `<span class="muted small">Pelos últimos preços que você pagou, o etanol está em <b>${fN(r * 100, 0)}%</b> da gasolina.</span>
         <div class="mf-meter" style="--be:${pos(be)}%" role="img" aria-label="Relação de preço ${fN(r * 100, 0)}% contra equilíbrio ${fN(be * 100, 0)}%"><i style="left:${pos(r)}%"></i><em style="left:${pos(r)}%">hoje ${fN(r * 100, 0)}%</em></div>` : ""}
       </div>`;
+    } else if (win) {
+      v = `<div class="mf-verdict"><strong>${titulo}</strong>${vm}</div>`;
     } else {
-      const falta = !sE ? "etanol" : "gasolina";
-      v = `<div class="mf-verdict"><span class="muted">${sE || sG ? `Para comparar, faça pelo menos dois abastecimentos seguidos de ${falta} com tanque cheio.` : "A primeira média aparece no segundo abastecimento com tanque cheio."}</span></div>`;
+      const falta = !sE ? "etanol" : !sG ? "gasolina" : "misto";
+      v = `<div class="mf-verdict"><span class="muted">${sE || sG || sM ? `Para comparar, faça pelo menos dois abastecimentos seguidos de ${falta} com tanque cheio.` : "A primeira média aparece no segundo abastecimento com tanque cheio."}</span></div>`;
     }
     const kmRod = segs.reduce((a, x) => a + x.dist, 0);
     const gasto = sorted.filter((e) => inPeriod(e.data)).reduce((a, e) => a + (e.total || 0), 0);
-    el.innerHTML = `<div style="display:grid;gap:12px"><div class="mf-duel">${card("etanol", sE, pE, cE)}${card("gasolina", sG, pG, cG)}</div>${v}
+    el.innerHTML = `<div style="display:grid;gap:12px"><div class="mf-duel">${card("etanol", sE, pE, cE)}${card("gasolina", sG, pG, cG)}${temMisto ? card("misto", sM, pM, cM) : ""}</div>${v}
       ${segs.length ? chart(segs.slice(-14)) : ""}
       <p class="small muted mf-resumo">${periodo ? `Últimos ${periodo / 30} meses` : "Todo o histórico"}: <b>${fKm(kmRod)} km</b> medidos · <b>${fR(gasto)}</b> abastecidos.</p></div>`;
   }
   function chart(segs) {
     const W = 340, H = 150, L = 26, B = 22, T = 16, max = Math.max(5, Math.ceil(Math.max(...segs.map((s) => s.kml)) / 5) * 5);
     const y = (v) => T + (H - T - B) * (1 - v / max), n = segs.length, bw = (W - L - 6) / n;
-    const col = { etanol: "var(--eth)", gasolina: "var(--gas)", misto: "var(--mix)" };
+    const col = { etanol: "var(--eth)", gasolina: "var(--gas)", misto: "var(--mis)", mistura: "var(--mix)" };
     let g = "";
     for (let t = 0; t <= max; t += 5) g += `<line x1="${L}" x2="${W - 4}" y1="${y(t)}" y2="${y(t)}" stroke="var(--border)" stroke-width="1"/><text x="${L - 5}" y="${y(t) + 4}" text-anchor="end" font-size="10" fill="var(--muted)">${t}</text>`;
     let b = "";
@@ -158,7 +172,7 @@
       if (i === 0 || i === n - 1) b += `<text x="${x + w / 2}" y="${H - 6}" text-anchor="middle" font-size="10" fill="var(--muted)">${fData(s.data)}</text>`;
     });
     return `<div class="mf-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="km por litro de cada trecho">${g}${b}</svg></div>
-      <div class="mf-legend"><span style="--c:var(--eth)">Etanol</span><span style="--c:var(--gas)">Gasolina</span><span style="--c:var(--mix)">Mistura</span><span>km/L por trecho · claro = logo após trocar de combustível</span></div>`;
+      <div class="mf-legend"><span style="--c:var(--eth)">Etanol</span><span style="--c:var(--gas)">Gasolina</span>${segs.some((s) => s.comb === "misto") ? '<span style="--c:var(--mis)">Misto</span>' : ""}${segs.some((s) => s.comb === "mistura") ? '<span style="--c:var(--mix)">Tanque misturado</span>' : ""}<span>km/L por trecho · claro = logo após trocar de combustível</span></div>`;
   }
   function renderLista(sorted, byId) {
     const el = $("#lista");
@@ -197,9 +211,10 @@
   // ---------------------------------------------------------------- formulário
   function setComb(c) {
     comb = c;
-    for (const [id, v] of [["#b-etanol", "etanol"], ["#b-gasolina", "gasolina"]]) {
+    for (const [id, v] of [["#b-etanol", "etanol"], ["#b-gasolina", "gasolina"], ["#b-misto", "misto"]]) {
       $(id).setAttribute("aria-pressed", c === v); $(id).classList.toggle("active", c === v);
     }
+    $("#dicaMisto").hidden = c !== "misto";
   }
   function msg(text, kind) { const m = $("#formMsg"); if (!text) { m.hidden = true; return; } m.textContent = text; m.className = "mf-msg " + kind; m.hidden = false; }
   function resetForm() {
@@ -213,6 +228,7 @@
   document.querySelectorAll(".mf-fields input").forEach((i) => i.addEventListener("input", () => i.classList.remove("filled")));
   $("#b-etanol").onclick = () => setComb("etanol");
   $("#b-gasolina").onclick = () => setComb("gasolina");
+  $("#b-misto").onclick = () => setComb("misto");
   $("#cancelar").onclick = () => { resetForm(); msg(); };
   function completarValores() {
     const l = dec($("#f-litros").value), t = dec($("#f-total").value), p = dec($("#f-preco").value);
@@ -344,7 +360,7 @@
     } else {
       const l = dec(r.litros), tot = dec(r.total), pr = dec(r.precoLitro);
       if (l) fill("litros", toField(l, 3)); if (tot) fill("total", toField(tot, 2)); if (pr) fill("preco", toField(pr, 3));
-      if (r.combustivel === "gasolina" || r.combustivel === "etanol") setComb(r.combustivel);
+      if (comb !== "misto" && (r.combustivel === "gasolina" || r.combustivel === "etanol")) setComb(r.combustivel);
       if (typeof r.data === "string" && /^\d{4}-\d{2}-\d{2}$/.test(r.data)) $("#f-data").value = r.data;
       completarValores();
       if (l) tileState(t, url, `${fN(l, 2)} L${r.combustivel ? " · " + NOMES[r.combustivel] : ""}`, "ok"); else tileState(t, url, "litros não encontrados", "err");

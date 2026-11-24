@@ -5,6 +5,8 @@
   --gas: var(--warn);
   --gas-soft: var(--warn-soft);
   --mix: var(--muted);
+  --mis: #7a5af8;
+  --mis-soft: color-mix(in srgb, #7a5af8 14%, var(--surface));
 }
 
 /* ---------- topo ---------- */
@@ -52,6 +54,7 @@
 /* ---------- formulário ---------- */
 .mf-comb button.eth.active { background: var(--eth); color: #fff; }
 .mf-comb button.gas.active { background: var(--gas); color: #fff; }
+.mf-comb button.mis.active { background: var(--mis); color: #fff; }
 .mf-comb button { font-size: 15px; min-height: 42px; }
 .mf-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .mf-fields input { font-variant-numeric: tabular-nums; font-size: 17px; }
@@ -71,9 +74,11 @@
 .mf-fuel { position: relative; border-radius: 12px; padding: 12px; display: grid; gap: 2px; min-width: 0; }
 .mf-fuel.eth { background: var(--eth-soft); }
 .mf-fuel.gas { background: var(--gas-soft); }
+.mf-fuel.mis { background: var(--mis-soft); grid-column: 1 / -1; }
 .mf-fuel .name { font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
 .mf-fuel.eth .name { color: var(--accent-strong); }
 .mf-fuel.gas .name { color: var(--gas); }
+.mf-fuel.mis .name { color: var(--mis); }
 .mf-fuel .big { font-size: 32px; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .mf-fuel .big small { font-size: 14px; font-weight: 700; color: var(--muted); margin-left: 3px; }
 .mf-fuel .line { font-size: 13px; color: var(--muted); }
@@ -85,6 +90,7 @@
 }
 .mf-fuel.eth .badge-win { background: var(--eth); }
 .mf-fuel.gas .badge-win { background: var(--gas); }
+.mf-fuel.mis .badge-win { background: var(--mis); }
 .mf-verdict { border-top: 1px solid var(--border); padding-top: 12px; display: grid; gap: 4px; font-size: 14px; }
 .mf-verdict strong { font-size: 17px; }
 .mf-meter {
@@ -114,7 +120,8 @@
 .mf-row .ops { grid-column: 1 / -1; display: flex; gap: 16px; }
 .badge.etanol { background: var(--eth-soft); color: var(--accent-strong); }
 .badge.gasolina { background: var(--gas-soft); color: var(--gas); }
-.badge.misto { background: var(--surface-2); color: var(--muted); }
+.badge.misto { background: var(--mis-soft); color: var(--mis); }
+.badge.mistura { background: var(--surface-2); color: var(--muted); }
 .badge.comb { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
 
 @media (max-width: 380px) {
