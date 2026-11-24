@@ -9,7 +9,7 @@ create table if not exists public.abastecimentos (
   litros      numeric(8,3) not null check (litros > 0),
   total       numeric(10,2),
   preco_litro numeric(8,3),
-  comb        text not null default 'etanol' check (comb in ('etanol','gasolina')),
+  comb        text not null default 'etanol' check (comb in ('etanol','gasolina','misto')),
   cheio       boolean not null default true,
   criado_em   timestamptz not null default now(),
   atualizado_em timestamptz not null default now(),
