@@ -66,6 +66,20 @@
 .mf-sum .mf-h2 { margin: 0; }
 .mf-rodas { display: grid; gap: 12px; margin-top: 12px; }
 #r-campos { display: grid; gap: 12px; }
+.mf-explica { display: grid; gap: 14px; border-top: 1px solid var(--border); padding-top: 14px; font-size: 14px; }
+.mf-explica h3 { margin: 0; font-size: 15px; }
+.mf-passos { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.mf-ex { background: var(--surface-2); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+.mf-ex .t { font-size: 13px; color: var(--muted); }
+.mf-bar-row { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mf-bar { height: 12px; border-radius: 99px; }
+.mf-bar.p { background: var(--muted); opacity: .7; }
+.mf-bar.r { background: var(--eth); }
+.mf-antes { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mf-antes th { text-align: right; font-weight: 700; color: var(--muted); padding: 4px 0; }
+.mf-antes th:first-child, .mf-antes td:first-child { text-align: left; }
+.mf-antes td { padding: 5px 0; border-top: 1px solid var(--border); text-align: right; }
+.mf-antes td.novo { font-weight: 800; color: var(--accent-strong); }
 .mf-msg { margin: 0; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 9px 12px; }
 .mf-msg.warn { background: var(--warn-soft); color: var(--warn); }
 .mf-msg.bad { background: var(--danger-soft); color: var(--danger); }

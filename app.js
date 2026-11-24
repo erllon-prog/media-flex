@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSAO = 6;
+  const VERSAO = 7;
 
   // ---------------------------------------------------------------- núcleo comum (login, amigos, usuários, avisos)
   const nucleo = Nucleo.iniciar({
@@ -15,13 +15,13 @@
     textoPrimeiraVez: "Primeira vez? É só entrar com o Google. Se você já usa o app Contas, é o mesmo login.",
     amigosTexto: "Seus amigos são os mesmos do app <b>Contas</b>. No Média Flex cada um vê só os próprios abastecimentos.",
     novidades: {
-      id: "media-flex-6",
-      titulo: "Novo: ajuste para rodas trocadas",
+      id: "media-flex-7",
+      titulo: "Novo: média corrigida para pneu trocado",
       itens: [
-        "Se você trocou os pneus por um tamanho diferente, o painel marca km errado. Agora dá para informar o <b>fator do odômetro</b> e o app corrige a média, inclusive a do histórico.",
-        "Tem uma calculadora para achar o fator medindo um trajeto com o Google Maps."
+        "Trocou os pneus por um tamanho diferente? O painel marca km errado. Informe o <b>fator do odômetro</b> e o app corrige a média, inclusive a do histórico.",
+        "O cartão <b>Rodas trocadas</b> tem uma calculadora (com o Google Maps ou Waze) e mostra, passo a passo e com um exemplo seu, como a conta foi feita."
       ],
-      dica: "Abra o cartão Rodas trocadas, logo abaixo do formulário."
+      dica: "O cartão fica logo abaixo do formulário de abastecimento."
     },
     novidadesAlvo: ".content",
     aoEntrar() { carregar(); },
@@ -75,7 +75,7 @@
         const dist = kmReais(base.km, e.km);
         if (dist > 0 && acc > 0) {
           const kml = dist / acc, preco = base.precoLitro || null;
-          const seg = { endId: e.id, dist, litros: acc, kml, comb: base.comb === "misto" ? "misto" : (mixed ? "mistura" : base.comb), preco, custoKm: preco ? preco / kml : null,
+          const seg = { endId: e.id, kmIni: base.km, kmFim: e.km, painel: e.km - base.km, dist, litros: acc, kml, comb: base.comb === "misto" ? "misto" : (mixed ? "mistura" : base.comb), preco, custoKm: preco ? preco / kml : null,
             transicao: !!(prevBaseComb && prevBaseComb !== base.comb), data: e.data };
           segs.push(seg); byId[e.id] = seg;
         }
@@ -108,6 +108,7 @@
     $("#ultimoKm").textContent = last ? `${fKm(last.km)} km` : "";
     renderPlacar(segs.filter((s) => inPeriod(s.data)), sorted);
     renderLista(sorted, byId);
+    renderExplica(segs);
   }
   function renderPlacar(segs, sorted) {
     const el = $("#placar");
@@ -164,7 +165,7 @@
     const gasto = sorted.filter((e) => inPeriod(e.data)).reduce((a, e) => a + (e.total || 0), 0);
     el.innerHTML = `<div style="display:grid;gap:12px"><div class="mf-duel">${card("etanol", sE, pE, cE)}${card("gasolina", sG, pG, cG)}${temMisto ? card("misto", sM, pM, cM) : ""}</div>${v}
       ${segs.length ? chart(segs.slice(-14)) : ""}
-      <p class="small muted mf-resumo">${periodo ? `Últimos ${periodo / 30} meses` : "Todo o histórico"}: <b>${fKm(kmRod)} km</b> medidos${cfg.fator !== 1 ? ` (painel × ${fN(cfg.fator, 3)})` : ""} · <b>${fR(gasto)}</b> abastecidos.</p></div>`;
+      <p class="small muted mf-resumo">${periodo ? `Últimos ${periodo / 30} meses` : "Todo o histórico"}: <b>${fKm(kmRod)} km</b> medidos${cfg.fator !== 1 ? ` (painel × ${fN(cfg.fator, 3)} · <button type="button" class="link" data-rodas>entenda</button>)` : ""} · <b>${fR(gasto)}</b> abastecidos.</p></div>`;
   }
   function chart(segs) {
     const W = 340, H = 150, L = 26, B = 22, T = 16, max = Math.max(5, Math.ceil(Math.max(...segs.map((s) => s.kml)) / 5) * 5);
@@ -192,7 +193,7 @@
       return `<div class="mf-row">
         <div class="top"><b>${fData(e.data)}</b><span class="badge comb ${e.comb}">${NOMES[e.comb]}</span>${e.cheio ? "" : '<span class="small muted">parcial</span>'}</div>
         <div class="det">${fKm(e.km)} km · ${fN(e.litros, 2)} L · ${fR(e.precoLitro)}/L${e.total ? ` · ${fR(e.total)}` : ""}</div>
-        <div class="res">${s ? `<span class="kml">${fN(s.kml, 1)}<small> km/L</small></span><span class="small muted">${s.custoKm ? fR(s.custoKm, 2) + "/km · " : ""}${fKm(s.dist)} km de ${NOMES[s.comb].toLowerCase()}</span>` : `<span class="small muted">${e.cheio ? "ponto de partida" : "soma no próximo"}</span>`}</div>
+        <div class="res">${s ? `<span class="kml">${fN(s.kml, 1)}<small> km/L</small></span><span class="small muted">${s.custoKm ? fR(s.custoKm, 2) + "/km · " : ""}${Math.round(s.dist) !== s.painel ? `${fKm(s.painel)} km no painel = ${fKm(s.dist)} km reais` : `${fKm(s.dist)} km`} de ${NOMES[s.comb].toLowerCase()}</span>` : `<span class="small muted">${e.cheio ? "ponto de partida" : "soma no próximo"}</span>`}</div>
         <div class="ops"><button type="button" class="link" data-edit="${e.id}">Editar</button><button type="button" class="link danger" data-del="${e.id}">${pendingDel === e.id ? "Toque de novo para excluir" : "Excluir"}</button></div>
       </div>`;
     }).join("");
@@ -223,6 +224,40 @@
 
   // ---------------------------------------------------------------- rodas trocadas (fator do odômetro)
   function rodasMsg(text, kind) { const m = $("#rodasMsg"); if (!text) { m.hidden = true; return; } m.textContent = text; m.className = "mf-msg " + kind; m.hidden = false; }
+  function renderExplica(segs) {
+    const el = $("#r-explica"); if (!el) return;
+    if (cfg.fator === 1 || !segs.length) { el.hidden = true; el.innerHTML = ""; return; }
+    const f = cfg.fator, painel = segs.reduce((a, x) => a + x.painel, 0), real = segs.reduce((a, x) => a + x.dist, 0), lit = segs.reduce((a, x) => a + x.litros, 0);
+    const wc = segs.filter((x) => x.preco), gasto = wc.reduce((a, x) => a + x.litros * x.preco, 0);
+    const cP = wc.length ? gasto / wc.reduce((a, x) => a + x.painel, 0) : null, cR = wc.length ? gasto / wc.reduce((a, x) => a + x.dist, 0) : null;
+    const last = segs[segs.length - 1], pct = (f - 1) * 100;
+    const desde = cfg.kmTroca != null ? `, só para os km depois de <b>${fKm(cfg.kmTroca)}</b> no painel` : ", em todo o histórico";
+    el.hidden = false;
+    el.innerHTML = `<h3>Como a correção funciona</h3>
+      <ol class="mf-passos">
+        <li><b>Pneu maior dá voltas mais compridas.</b> O painel conta voltas da roda, então marca menos km do que você realmente andou.</li>
+        <li><b>Seu fator é ${fN(f, 3)}.</b> A cada 100 km no painel você rodou ${fN(100 * f, 1)} km de verdade (${fN(pct, 1)}% a mais).</li>
+        <li><b>Só a conta muda, não os seus registros.</b> Os KM e os litros que você digitou continuam iguais. O app multiplica a distância de cada trecho pelo fator${desde}. Os litros não mudam, então o km/L sobe e o R$/km cai.</li>
+      </ol>
+      <div class="mf-ex">
+        <span class="t">Exemplo, seu último trecho: do KM ${fKm(last.kmIni)} ao KM ${fKm(last.kmFim)}</span>
+        <div class="mf-bar-row"><span>Painel</span><i class="mf-bar p" style="width:${(100 / f).toFixed(1)}%"></i><b>${fKm(last.painel)} km</b></div>
+        <div class="mf-bar-row"><span>Real</span><i class="mf-bar r" style="width:100%"></i><b>${fN(last.dist, 1)} km</b></div>
+        <span>${fN(last.dist, 1)} km ÷ ${fN(last.litros, 1)} L = <b>${fN(last.kml, 2)} km/L</b> <span class="muted">(pelo painel dava ${fN(last.painel / last.litros, 2)})</span></span>
+      </div>
+      <table class="mf-antes" aria-label="Antes e depois da correção">
+        <thead><tr><th>Todos os ${segs.length} ${segs.length === 1 ? "trecho" : "trechos"}</th><th>Pelo painel</th><th>Corrigido</th></tr></thead>
+        <tbody>
+          <tr><td>Distância</td><td>${fKm(painel)} km</td><td class="novo">${fKm(real)} km</td></tr>
+          <tr><td>Média</td><td>${fN(painel / lit, 2)} km/L</td><td class="novo">${fN(real / lit, 2)} km/L</td></tr>
+          ${cP != null ? `<tr><td>Custo</td><td>${fR(cP)}/km</td><td class="novo">${fR(cR)}/km</td></tr>` : ""}
+        </tbody>
+      </table>`;
+  }
+  $("#placar").addEventListener("click", (ev) => {
+    if (!ev.target.closest("[data-rodas]")) return;
+    const d = $("#rodas"); d.open = true; d.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   function fillRodas() {
     const on = cfg.fator !== 1;
     $("#r-on").checked = on; $("#r-campos").hidden = !on;
