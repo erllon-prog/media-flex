@@ -10,6 +10,7 @@ Mesmo esquema do app de contas: GitHub Pages (repositório público) + Supabase 
 - Abastecimento parcial (chave "Tanque cheio" desligada) soma os litros no próximo tanque cheio.
 - O trecho é atribuído ao combustível que estava no tanque, ou seja, o do tanque cheio anterior.
 - **Misto** (v5) é um terceiro combustível: etanol e gasolina juntos no mesmo tanque. Tem média e R$/km próprios e entra na comparação. Como a média depende da proporção, vale repetir sempre parecido (ex.: metade e metade).
+- **Rodas trocadas** (v6): pneu de outro tamanho faz o painel marcar km diferente do real. No cartão "Rodas trocadas" informe o **fator do odômetro** (`km reais ÷ km do painel`, ex.: 1,05) e, se quiser, o KM do painel a partir do qual ele vale (vazio = todo o histórico). O app corrige os km de cada trecho: `km reais = (KM final − KM inicial) × fator`, então km/L sobe e R$/km cai na mesma proporção. Tem uma calculadora: zere o TRIP, rode uma rota com distância conhecida no Maps/GPS e preencha os dois números.
 - O primeiro trecho depois de trocar de combustível fica marcado como transição (tanque com mistura). Ele sai da média quando há pelo menos dois trechos limpos daquele combustível.
 - **R$/km** = último preço por litro pago ÷ média km/L. O mais barato ganha o selo "compensa".
 - **Ponto de equilíbrio do seu carro** = km/L do etanol ÷ km/L da gasolina. Substitui a regra genérica dos 70%.
@@ -18,6 +19,7 @@ Mesmo esquema do app de contas: GitHub Pages (repositório público) + Supabase 
 
 1. **Tabela**: no Supabase do app de contas, abra o SQL Editor e rode `supabase/schema.sql`.
    - Quem já tem a tabela: rode também `supabase/migracao-misto.sql` (libera o valor `misto` na coluna `comb`).
+   - Para o ajuste de rodas trocadas (v6), rode `supabase/migracao-rodas.sql` (cria a tabela `media_config`).
 2. **Chave do Gemini (grátis)**: em https://aistudio.google.com crie uma API key.
 3. **Edge Function**:
    - Supabase → Edge Functions → Deploy a new function → via Editor, nome `ler-foto`, cole `supabase/functions/ler-foto/index.ts` e faça o deploy. Em Settings, deixe "Verify JWT with legacy secret" desligado: o código já confere o login.
@@ -36,6 +38,7 @@ Mesmo esquema do app de contas: GitHub Pages (repositório público) + Supabase 
 | `config.js` | URL e anon key do Supabase |
 | `manifest.webmanifest`, `sw.js`, ícones | Instalação como app no celular |
 | `supabase/schema.sql` | Tabela `abastecimentos` com RLS (cada um vê só os seus) |
+| `supabase/migracao-rodas.sql` | Tabela `media_config` com o fator do odômetro por usuário (v6) |
 | `supabase/migracao-misto.sql` | Atualização da tabela já existente para aceitar `misto` (v5) |
 | `supabase/functions/ler-foto/index.ts` | Lê KM do painel e litros/valor/preço/combustível/data da nota |
 

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSAO = 5;
+  const VERSAO = 6;
 
   // ---------------------------------------------------------------- núcleo comum (login, amigos, usuários, avisos)
   const nucleo = Nucleo.iniciar({
@@ -15,17 +15,17 @@
     textoPrimeiraVez: "Primeira vez? É só entrar com o Google. Se você já usa o app Contas, é o mesmo login.",
     amigosTexto: "Seus amigos são os mesmos do app <b>Contas</b>. No Média Flex cada um vê só os próprios abastecimentos.",
     novidades: {
-      id: "media-flex-5",
-      titulo: "Novo: combustível Misto",
+      id: "media-flex-6",
+      titulo: "Novo: ajuste para rodas trocadas",
       itens: [
-        "Agora dá para registrar o abastecimento como <b>Misto</b> (etanol e gasolina juntos no tanque).",
-        "O placar compara Etanol, Gasolina e Misto em km/L e em R$/km, para você ver se a média melhora."
+        "Se você trocou os pneus por um tamanho diferente, o painel marca km errado. Agora dá para informar o <b>fator do odômetro</b> e o app corrige a média, inclusive a do histórico.",
+        "Tem uma calculadora para achar o fator medindo um trajeto com o Google Maps."
       ],
-      dica: "Para a comparação ser justa, tente repetir sempre a mesma proporção no misto."
+      dica: "Abra o cartão Rodas trocadas, logo abaixo do formulário."
     },
     novidadesAlvo: ".content",
     aoEntrar() { carregar(); },
-    aoSair() { entries = []; loaded = false; resetForm(); msg(); render(); },
+    aoSair() { entries = []; cfg = { fator: 1, kmTroca: null }; fillRodas(); loaded = false; resetForm(); msg(); render(); },
     aoVoltar() { carregar(); }
   });
   const sb = nucleo.sb;
@@ -34,7 +34,7 @@
 
   // ---------------------------------------------------------------- estado
   const NOMES = { etanol: "Etanol", gasolina: "Gasolina", misto: "Misto", mistura: "Tanque misturado" };
-  let entries = [], loaded = false, editingId = null, comb = "etanol", periodo = 0, warnedKm = null, pendingDel = null, pendingTimer = null;
+  let cfg = { fator: 1, kmTroca: null }, entries = [], loaded = false, editingId = null, comb = "etanol", periodo = 0, warnedKm = null, pendingDel = null, pendingTimer = null;
 
   // ---------------------------------------------------------------- formatação
   const fN = (n, d = 1) => n == null || !isFinite(n) ? "—" : n.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -56,6 +56,14 @@
   // ---------------------------------------------------------------- cálculo
   // Média entre dois tanques cheios: km rodados / litros colocados até encher de novo.
   // O trecho leva o combustível que estava no tanque (o do tanque cheio anterior).
+  // Ajuste do odômetro (pneu trocado): km reais entre dois KMs do painel. Só o trecho depois de cfg.kmTroca leva o fator.
+  function kmReais(a, b) {
+    const f = cfg.fator, k = cfg.kmTroca;
+    if (!f || f === 1) return b - a;
+    if (k == null) return (b - a) * f;
+    const pre = Math.max(0, Math.min(b, k) - a);
+    return pre + (b - a - pre) * f;
+  }
   function calc(list) {
     const s = [...list].sort((a, b) => a.km - b.km); const segs = [], byId = {};
     let base = null, prevBaseComb = null, acc = 0, mixed = false;
@@ -64,7 +72,7 @@
       acc += e.litros || 0;
       if (!e.cheio && e.comb !== base.comb) mixed = true;
       if (e.cheio) {
-        const dist = e.km - base.km;
+        const dist = kmReais(base.km, e.km);
         if (dist > 0 && acc > 0) {
           const kml = dist / acc, preco = base.precoLitro || null;
           const seg = { endId: e.id, dist, litros: acc, kml, comb: base.comb === "misto" ? "misto" : (mixed ? "mistura" : base.comb), preco, custoKm: preco ? preco / kml : null,
@@ -156,7 +164,7 @@
     const gasto = sorted.filter((e) => inPeriod(e.data)).reduce((a, e) => a + (e.total || 0), 0);
     el.innerHTML = `<div style="display:grid;gap:12px"><div class="mf-duel">${card("etanol", sE, pE, cE)}${card("gasolina", sG, pG, cG)}${temMisto ? card("misto", sM, pM, cM) : ""}</div>${v}
       ${segs.length ? chart(segs.slice(-14)) : ""}
-      <p class="small muted mf-resumo">${periodo ? `Últimos ${periodo / 30} meses` : "Todo o histórico"}: <b>${fKm(kmRod)} km</b> medidos · <b>${fR(gasto)}</b> abastecidos.</p></div>`;
+      <p class="small muted mf-resumo">${periodo ? `Últimos ${periodo / 30} meses` : "Todo o histórico"}: <b>${fKm(kmRod)} km</b> medidos${cfg.fator !== 1 ? ` (painel × ${fN(cfg.fator, 3)})` : ""} · <b>${fR(gasto)}</b> abastecidos.</p></div>`;
   }
   function chart(segs) {
     const W = 340, H = 150, L = 26, B = 22, T = 16, max = Math.max(5, Math.ceil(Math.max(...segs.map((s) => s.kml)) / 5) * 5);
@@ -202,11 +210,50 @@
   }
   async function carregar() {
     if (!nucleo.user) return;
-    const { data, error } = await sb.from("abastecimentos").select("id,data,km,litros,total,preco_litro,comb,cheio").order("km", { ascending: true });
+    const [{ data, error }, c] = await Promise.all([
+      sb.from("abastecimentos").select("id,data,km,litros,total,preco_litro,comb,cheio").order("km", { ascending: true }),
+      sb.from("media_config").select("fator,km_troca").maybeSingle()
+    ]);
     loaded = true;
+    if (!c.error && c.data) cfg = { fator: Number(c.data.fator) || 1, kmTroca: c.data.km_troca == null ? null : Number(c.data.km_troca) };
+    fillRodas();
     if (error) { msg(erroTexto("carregar o histórico", error), "bad"); render(); return; }
     entries = data.map(fromRow); render();
   }
+
+  // ---------------------------------------------------------------- rodas trocadas (fator do odômetro)
+  function rodasMsg(text, kind) { const m = $("#rodasMsg"); if (!text) { m.hidden = true; return; } m.textContent = text; m.className = "mf-msg " + kind; m.hidden = false; }
+  function fillRodas() {
+    const on = cfg.fator !== 1;
+    $("#r-on").checked = on; $("#r-campos").hidden = !on;
+    $("#r-fator").value = on ? toField(cfg.fator, 3) : ""; $("#r-km").value = cfg.kmTroca == null ? "" : String(cfg.kmTroca);
+    $("#rodasRes").textContent = on ? `fator ${fN(cfg.fator, 3)}${cfg.kmTroca != null ? " desde " + fKm(cfg.kmTroca) + " km" : ""}` : "desligado";
+  }
+  $("#r-on").onchange = () => { $("#r-campos").hidden = !$("#r-on").checked; rodasMsg(); };
+  $("#r-calc").onclick = () => {
+    const trip = dec($("#r-trip").value), real = dec($("#r-real").value);
+    if (!trip || !real) return rodasMsg("Preencha o KM do TRIP do painel e os KM reais do Maps/GPS.", "bad");
+    const f = real / trip;
+    if (f < 0.8 || f > 1.3) return rodasMsg(`Deu ${fN(f, 3)}, fora do normal. Confira os dois números.`, "bad");
+    $("#r-fator").value = toField(+f.toFixed(3), 3);
+    rodasMsg(`Fator ${fN(f, 3)}. Toque em Salvar ajuste para aplicar.${trip < 10 ? " Trajeto curto: o erro é maior; confirme depois com um trecho mais longo." : ""}`, "warn");
+  };
+  $("#r-salvar").onclick = async () => {
+    if (!nucleo.user) return rodasMsg("Entre com sua conta para salvar.", "bad");
+    let fator = 1, kmTroca = null;
+    if ($("#r-on").checked) {
+      fator = dec($("#r-fator").value);
+      if (!fator || fator < 0.8 || fator > 1.3) return rodasMsg("Informe o fator entre 0,8 e 1,3 (ex.: 1,050).", "bad");
+      fator = +fator.toFixed(4);
+      const k = $("#r-km").value.trim(); if (k) { kmTroca = kmParse(k); if (kmTroca == null) return rodasMsg("KM da troca inválido.", "bad"); }
+    }
+    const btn = $("#r-salvar"); btn.disabled = true;
+    const { data: u } = await sb.auth.getUser();
+    const { error } = await sb.from("media_config").upsert({ user_id: u?.user?.id, fator, km_troca: kmTroca, atualizado_em: new Date().toISOString() }, { onConflict: "user_id" });
+    btn.disabled = false;
+    if (error) return rodasMsg(erroTexto("salvar o ajuste", error), "bad");
+    cfg = { fator, kmTroca }; fillRodas(); rodasMsg(); render(); nucleo.toast(fator === 1 ? "Ajuste desligado." : "Ajuste salvo. A média foi recalculada.");
+  };
 
   // ---------------------------------------------------------------- formulário
   function setComb(c) {

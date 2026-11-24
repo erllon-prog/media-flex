@@ -15,7 +15,7 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="../comum/nucleo.css?v=1">
-  <link rel="stylesheet" href="app.css?v=5">
+  <link rel="stylesheet" href="app.css?v=6">
 </head>
 <body>
   <section id="view-app" hidden>
@@ -83,6 +83,31 @@
         </div>
       </section>
 
+      <!-- RODAS TROCADAS (ajuste do odômetro) -->
+      <section class="card mf-painel" aria-labelledby="t-rodas">
+        <details id="rodas">
+          <summary class="mf-sum"><h2 id="t-rodas" class="mf-h2">Rodas trocadas</h2><span class="muted small" id="rodasRes"></span></summary>
+          <div class="mf-rodas">
+            <p class="muted small">Pneu maior faz o painel marcar menos km do que você roda de verdade. Informe o fator (km reais ÷ km do painel) e o app corrige a média, inclusive a do histórico.</p>
+            <label class="check mf-cheio"><input type="checkbox" id="r-on"> Rodas trocadas (corrigir o km do painel)</label>
+            <div id="r-campos" hidden>
+              <div class="mf-fields">
+                <label>Fator do odômetro<input id="r-fator" inputmode="decimal" autocomplete="off" placeholder="1,050"></label>
+                <label>Vale desde o KM do painel (opcional)<input id="r-km" inputmode="numeric" autocomplete="off" placeholder="vazio = todo o histórico"></label>
+              </div>
+              <p class="muted small mf-nota">Não sabe o fator? Meça um trajeto: zere o TRIP do painel, rode por uma rota que o Google Maps mostre a distância e preencha os dois campos abaixo.</p>
+              <div class="mf-fields">
+                <label>KM no TRIP do painel<input id="r-trip" inputmode="decimal" autocomplete="off" placeholder="0,0"></label>
+                <label>KM reais (Maps/GPS)<input id="r-real" inputmode="decimal" autocomplete="off" placeholder="0,0"></label>
+              </div>
+              <button type="button" class="btn" id="r-calc">Calcular fator</button>
+            </div>
+            <p class="mf-msg" id="rodasMsg" hidden></p>
+            <div class="sheet-foot"><button type="button" class="btn primary" id="r-salvar">Salvar ajuste</button></div>
+          </div>
+        </details>
+      </section>
+
       <!-- PLACAR -->
       <section class="card mf-painel" aria-labelledby="t-placar">
         <div class="mf-head">
@@ -109,6 +134,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../comum/config.js?v=1"></script>
   <script src="../comum/nucleo.js?v=1"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

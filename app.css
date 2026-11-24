@@ -61,6 +61,11 @@
 .mf-fields input.filled { background: var(--accent-soft); border-color: var(--accent); }
 .mf-cheio { align-self: end; min-height: 44px; }
 .mf-nota { margin: -4px 0 0; }
+.mf-sum { display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer; list-style: none; }
+.mf-sum::-webkit-details-marker { display: none; }
+.mf-sum .mf-h2 { margin: 0; }
+.mf-rodas { display: grid; gap: 12px; margin-top: 12px; }
+#r-campos { display: grid; gap: 12px; }
 .mf-msg { margin: 0; font-size: 14px; font-weight: 600; border-radius: 10px; padding: 9px 12px; }
 .mf-msg.warn { background: var(--warn-soft); color: var(--warn); }
 .mf-msg.bad { background: var(--danger-soft); color: var(--danger); }
