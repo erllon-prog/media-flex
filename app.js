@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSAO = 8;
+  const VERSAO = 9;
 
   // ---------------------------------------------------------------- núcleo comum (login, amigos, usuários, avisos)
   const nucleo = Nucleo.iniciar({
@@ -124,7 +124,7 @@
     const pE = ultimoPreco(sorted, "etanol"), pG = ultimoPreco(sorted, "gasolina"), pM = ultimoPreco(sorted, "misto");
     const custo = (s, p) => s && p ? p.p / s.kml : (s ? s.custoHist : null);
     const cE = custo(sE, pE), cG = custo(sG, pG), cM = custo(sM, pM);
-    const temMisto = !!sM || sorted.some((e) => e.comb === "misto");
+    const temMisto = true; // o Misto sempre aparece, mesmo antes da primeira medição
     $("#t-placar").textContent = temMisto ? "Etanol x Gasolina x Misto" : "Etanol x Gasolina";
     const cands = [["etanol", cE], ["gasolina", cG], ["misto", cM]].filter((x) => x[1] != null).sort((a, b) => a[1] - b[1]);
     const win = cands.length >= 2 ? cands[0][0] : null;

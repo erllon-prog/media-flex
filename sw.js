@@ -1,7 +1,7 @@
 // Cache só dos arquivos do app e do núcleo comum; dados e leitura de foto sempre vão para a rede.
-const CACHE = "media-flex-v8";
+const CACHE = "media-flex-v9";
 const SHELL = [
-  "./", "index.html", "app.css?v=8", "app.js?v=8", "manifest.webmanifest",
+  "./", "index.html", "app.css?v=9", "app.js?v=9", "manifest.webmanifest",
   "icon-192.png", "icon-512.png", "apple-touch-icon.png",
   "../comum/nucleo.css?v=1", "../comum/nucleo.js?v=1", "../comum/config.js?v=1",
   "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
