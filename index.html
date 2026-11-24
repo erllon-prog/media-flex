@@ -15,7 +15,7 @@
   <link rel="icon" href="icon-192.png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="stylesheet" href="../comum/nucleo.css?v=1">
-  <link rel="stylesheet" href="app.css?v=7">
+  <link rel="stylesheet" href="app.css?v=8">
 </head>
 <body>
   <section id="view-app" hidden>
@@ -37,9 +37,24 @@
       <button type="button" id="novos-aviso" class="convite-aviso" hidden></button>
       <button type="button" id="convite-aviso" class="convite-aviso" hidden></button>
 
+      <!-- PLACAR -->
+      <section class="card mf-painel" aria-labelledby="t-placar">
+        <div class="mf-head">
+          <h2 id="t-placar" class="mf-h2">Etanol x Gasolina</h2>
+          <div class="mf-periodo" role="group" aria-label="Período">
+            <button type="button" class="chip" data-p="90">3 meses</button>
+            <button type="button" class="chip" data-p="180">6 meses</button>
+            <button type="button" class="chip active" data-p="0">Tudo</button>
+          </div>
+        </div>
+        <div id="placar"></div>
+      </section>
+
       <!-- NOVO ABASTECIMENTO -->
-      <section class="card mf-painel" id="novo" aria-labelledby="t-novo">
-        <h2 id="t-novo" class="mf-h2">Novo abastecimento</h2>
+      <section class="card mf-painel mf-novo" id="novo">
+        <details id="novo-det">
+        <summary class="mf-nova"><span class="mais">+</span> Novo abastecimento</summary>
+        <div class="mf-form">
 
         <div class="mf-shots" id="shots">
           <label class="mf-shot" id="tile-painel">
@@ -81,12 +96,19 @@
           <button type="button" class="btn" id="cancelar" hidden>Cancelar</button>
           <button type="button" class="btn primary" id="salvar">Salvar abastecimento</button>
         </div>
+        </div>
+        </details>
       </section>
 
+      <!-- HISTÓRICO -->
+      <section class="card mf-painel" aria-labelledby="t-hist">
+        <div class="mf-head"><h2 id="t-hist" class="mf-h2">Histórico</h2><span class="muted small" id="histCount"></span></div>
+        <div class="mf-lista" id="lista"></div>
+      </section>
       <!-- RODAS TROCADAS (ajuste do odômetro) -->
       <section class="card mf-painel" aria-labelledby="t-rodas">
         <details id="rodas">
-          <summary class="mf-sum"><h2 id="t-rodas" class="mf-h2">Rodas trocadas</h2><span class="muted small" id="rodasRes"></span></summary>
+          <summary class="mf-sum"><h2 id="t-rodas" class="mf-h2">Ajuste do pneu (rodas trocadas)</h2><span class="muted small" id="rodasRes"></span></summary>
           <div class="mf-rodas">
             <p class="muted small">Pneu maior faz o painel marcar menos km do que você roda de verdade. Informe o fator (km reais ÷ km do painel) e o app corrige a média, inclusive a do histórico.</p>
             <label class="check mf-cheio"><input type="checkbox" id="r-on"> Rodas trocadas (corrigir o km do painel)</label>
@@ -109,24 +131,6 @@
         </details>
       </section>
 
-      <!-- PLACAR -->
-      <section class="card mf-painel" aria-labelledby="t-placar">
-        <div class="mf-head">
-          <h2 id="t-placar" class="mf-h2">Etanol x Gasolina</h2>
-          <div class="mf-periodo" role="group" aria-label="Período">
-            <button type="button" class="chip" data-p="90">3 meses</button>
-            <button type="button" class="chip" data-p="180">6 meses</button>
-            <button type="button" class="chip active" data-p="0">Tudo</button>
-          </div>
-        </div>
-        <div id="placar"></div>
-      </section>
-
-      <!-- HISTÓRICO -->
-      <section class="card mf-painel" aria-labelledby="t-hist">
-        <div class="mf-head"><h2 id="t-hist" class="mf-h2">Histórico</h2><span class="muted small" id="histCount"></span></div>
-        <div class="mf-lista" id="lista"></div>
-      </section>
     </main>
   </section>
 
@@ -135,6 +139,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../comum/config.js?v=1"></script>
   <script src="../comum/nucleo.js?v=1"></script>
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

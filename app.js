@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSAO = 7;
+  const VERSAO = 8;
 
   // ---------------------------------------------------------------- núcleo comum (login, amigos, usuários, avisos)
   const nucleo = Nucleo.iniciar({
@@ -15,13 +15,13 @@
     textoPrimeiraVez: "Primeira vez? É só entrar com o Google. Se você já usa o app Contas, é o mesmo login.",
     amigosTexto: "Seus amigos são os mesmos do app <b>Contas</b>. No Média Flex cada um vê só os próprios abastecimentos.",
     novidades: {
-      id: "media-flex-7",
-      titulo: "Novo: média corrigida para pneu trocado",
+      id: "media-flex-8",
+      titulo: "Tela mais limpa",
       itens: [
-        "Trocou os pneus por um tamanho diferente? O painel marca km errado. Informe o <b>fator do odômetro</b> e o app corrige a média, inclusive a do histórico.",
-        "O cartão <b>Rodas trocadas</b> tem uma calculadora (com o Google Maps ou Waze) e mostra, passo a passo e com um exemplo seu, como a conta foi feita."
+        "A <b>média já vem corrigida</b> pelo pneu e fica em destaque. Os números do painel viraram detalhe.",
+        "O resultado fica no topo, o formulário abre no botão <b>+ Novo abastecimento</b> e cada registro do histórico abre com um toque."
       ],
-      dica: "O cartão fica logo abaixo do formulário de abastecimento."
+      dica: "O ajuste do pneu está no fim da página."
     },
     novidadesAlvo: ".content",
     aoEntrar() { carregar(); },
@@ -133,11 +133,10 @@
       if (!s) return `<div class="mf-fuel ${cls} empty"><span class="name">${NOMES[fuel]}</span><span class="big">—</span>
         <span class="line">${sorted.some((e) => e.comb === fuel && e.cheio) ? "Falta o próximo tanque cheio para medir." : "Sem medição ainda."}</span>${p ? `<span class="line">Último preço <b>${fR(p.p)}</b></span>` : ""}</div>`;
       return `<div class="mf-fuel ${cls}">${win === fuel ? '<span class="badge-win">compensa</span>' : ""}<span class="name">${NOMES[fuel]}</span>
-        <span class="big">${c != null ? fN(c, 2) : "—"}<small>R$/km</small></span>
-        <span class="line"><b>${fN(s.kml, 1)} km/L</b> · ${s.n} ${s.n === 1 ? "trecho" : "trechos"}</span>
-        ${p ? `<span class="line">Preço ref. <b>${fR(p.p)}</b> em ${fData(p.data)}</span>` : ""}</div>`;
+        <span class="big">${fN(s.kml, 1)}<small>km/L</small></span>
+        <span class="line"><b>${c != null ? fR(c, 2) : "—"}</b> por km${p ? ` · ${fR(p.p)}/L` : ""}</span></div>`;
     };
-    let v = "";
+    let v = "", vdet = "";
     const pct = (a, b) => { const x = (a / b - 1) * 100; return `${x >= 0 ? "+" : "−"}${fN(Math.abs(x), 0)}%`; };
     let vm = "";
     if (sM && (sE || sG)) {
@@ -150,22 +149,23 @@
     if (sE && sG) {
       const be = sE.kml / sG.kml; const r = pE && pG ? pE.p / pG.p : null;
       const pos = (x) => Math.max(2, Math.min(98, (x - 0.5) / 0.5 * 100));
-      v = `<div class="mf-verdict"><strong>${titulo}</strong>${vm}
-        <span>No seu carro o etanol rende <b>${fN(be * 100, 0)}%</b> da gasolina. Ele compensa enquanto custar até <b>${fN(be * 100, 0)}%</b> do preço dela.</span>
-        ${r != null ? `<span class="muted small">Pelos últimos preços que você pagou, o etanol está em <b>${fN(r * 100, 0)}%</b> da gasolina.</span>
-        <div class="mf-meter" style="--be:${pos(be)}%" role="img" aria-label="Relação de preço ${fN(r * 100, 0)}% contra equilíbrio ${fN(be * 100, 0)}%"><i style="left:${pos(r)}%"></i><em style="left:${pos(r)}%">hoje ${fN(r * 100, 0)}%</em></div>` : ""}
-      </div>`;
+      v = `<div class="mf-verdict"><strong>${titulo}</strong>
+        <span>O etanol compensa enquanto custar até <b>${fN(be * 100, 0)}%</b> do preço da gasolina.${r != null ? ` Hoje está em <b>${fN(r * 100, 0)}%</b>.` : ""}</span></div>`;
+      vdet = `${vm ? `<div class="mf-verdict" style="border:0;padding:0">${vm}</div>` : ""}
+        ${r != null ? `<div class="mf-meter" style="--be:${pos(be)}%" role="img" aria-label="Relação de preço ${fN(r * 100, 0)}% contra equilíbrio ${fN(be * 100, 0)}%"><i style="left:${pos(r)}%"></i><em style="left:${pos(r)}%">hoje ${fN(r * 100, 0)}%</em></div>` : ""}`;
     } else if (win) {
-      v = `<div class="mf-verdict"><strong>${titulo}</strong>${vm}</div>`;
+      v = `<div class="mf-verdict"><strong>${titulo}</strong></div>`; vdet = vm ? `<div class="mf-verdict" style="border:0;padding:0">${vm}</div>` : "";
     } else {
       const falta = !sE ? "etanol" : !sG ? "gasolina" : "misto";
       v = `<div class="mf-verdict"><span class="muted">${sE || sG || sM ? `Para comparar, faça pelo menos dois abastecimentos seguidos de ${falta} com tanque cheio.` : "A primeira média aparece no segundo abastecimento com tanque cheio."}</span></div>`;
     }
     const kmRod = segs.reduce((a, x) => a + x.dist, 0);
     const gasto = sorted.filter((e) => inPeriod(e.data)).reduce((a, e) => a + (e.total || 0), 0);
+    const painelKm = segs.reduce((x, s) => x + s.painel, 0);
+    const resumo = `${periodo ? `Últimos ${periodo / 30} meses` : "Todo o histórico"}: <b>${fKm(kmRod)} km</b> rodados · <b>${fR(gasto)}</b> abastecidos.${cfg.fator !== 1 ? `<br>O painel marcou ${fKm(painelKm)} km; o app multiplicou por ${fN(cfg.fator, 3)} (pneu trocado). <button type="button" class="link" data-rodas>Como funciona</button>` : ""}`;
     el.innerHTML = `<div style="display:grid;gap:12px"><div class="mf-duel">${card("etanol", sE, pE, cE)}${card("gasolina", sG, pG, cG)}${temMisto ? card("misto", sM, pM, cM) : ""}</div>${v}
-      ${segs.length ? chart(segs.slice(-14)) : ""}
-      <p class="small muted mf-resumo">${periodo ? `Últimos ${periodo / 30} meses` : "Todo o histórico"}: <b>${fKm(kmRod)} km</b> medidos${cfg.fator !== 1 ? ` (painel × ${fN(cfg.fator, 3)} · <button type="button" class="link" data-rodas>entenda</button>)` : ""} · <b>${fR(gasto)}</b> abastecidos.</p></div>`;
+      <details class="mf-mais"><summary>Mais detalhes</summary><div class="mf-mais-c">${vdet}${segs.length ? chart(segs.slice(-14)) : ""}
+      <p class="small muted mf-resumo">${resumo}</p></div></details></div>`;
   }
   function chart(segs) {
     const W = 340, H = 150, L = 26, B = 22, T = 16, max = Math.max(5, Math.ceil(Math.max(...segs.map((s) => s.kml)) / 5) * 5);
@@ -190,12 +190,17 @@
     if (!sorted.length) { el.innerHTML = `<p class="small muted" style="margin:0">Seus abastecimentos aparecem aqui, do mais recente para o mais antigo.</p>`; return; }
     el.innerHTML = [...sorted].reverse().map((e) => {
       const s = byId[e.id];
-      return `<div class="mf-row">
-        <div class="top"><b>${fData(e.data)}</b><span class="badge comb ${e.comb}">${NOMES[e.comb]}</span>${e.cheio ? "" : '<span class="small muted">parcial</span>'}</div>
-        <div class="det">${fKm(e.km)} km · ${fN(e.litros, 2)} L · ${fR(e.precoLitro)}/L${e.total ? ` · ${fR(e.total)}` : ""}</div>
-        <div class="res">${s ? `<span class="kml">${fN(s.kml, 1)}<small> km/L</small></span><span class="small muted">${s.custoKm ? fR(s.custoKm, 2) + "/km · " : ""}${Math.round(s.dist) !== s.painel ? `${fKm(s.painel)} km no painel = ${fKm(s.dist)} km reais` : `${fKm(s.dist)} km`} de ${NOMES[s.comb].toLowerCase()}</span>` : `<span class="small muted">${e.cheio ? "ponto de partida" : "soma no próximo"}</span>`}</div>
-        <div class="ops"><button type="button" class="link" data-edit="${e.id}">Editar</button><button type="button" class="link danger" data-del="${e.id}">${pendingDel === e.id ? "Toque de novo para excluir" : "Excluir"}</button></div>
-      </div>`;
+      const corr = s && Math.round(s.dist) !== s.painel;
+      const sub = s ? `${fKm(s.dist)} km${s.custoKm ? ` · ${fR(s.custoKm, 2)}/km` : ""}` : (e.cheio ? "ponto de partida" : "soma no próximo");
+      return `<details class="mf-row"${pendingDel === e.id ? " open" : ""}>
+        <summary><span class="l"><b>${fData(e.data)}</b><span class="badge comb ${e.comb}">${NOMES[e.comb]}</span>${e.cheio ? "" : '<span class="small muted">parcial</span>'}<span class="sub">${sub}</span></span>
+          <span class="kml">${s ? `${fN(s.kml, 1)}<small> km/L</small>` : ""}</span></summary>
+        <div class="mf-det">
+          <span>${fKm(e.km)} km no painel · ${fN(e.litros, 2)} L · ${fR(e.precoLitro)}/L${e.total ? ` · ${fR(e.total)}` : ""}</span>
+          ${corr ? `<span>Trecho: ${fKm(s.painel)} km no painel = ${fKm(s.dist)} km reais (× ${fN(cfg.fator, 3)})</span>` : ""}
+          <div class="ops"><button type="button" class="link" data-edit="${e.id}">Editar</button><button type="button" class="link danger" data-del="${e.id}">${pendingDel === e.id ? "Toque de novo para excluir" : "Excluir"}</button></div>
+        </div>
+      </details>`;
     }).join("");
   }
 
@@ -311,7 +316,7 @@
   $("#b-etanol").onclick = () => setComb("etanol");
   $("#b-gasolina").onclick = () => setComb("gasolina");
   $("#b-misto").onclick = () => setComb("misto");
-  $("#cancelar").onclick = () => { resetForm(); msg(); };
+  $("#cancelar").onclick = () => { resetForm(); msg(); $("#novo-det").open = false; };
   function completarValores() {
     const l = dec($("#f-litros").value), t = dec($("#f-total").value), p = dec($("#f-preco").value);
     if (l && t && !p) fill("preco", toField(t / l, 2));
@@ -340,7 +345,7 @@
     const q = eraEdicao ? sb.from("abastecimentos").update(row).eq("id", editingId) : sb.from("abastecimentos").insert(row);
     const { error } = await q; btn.disabled = false;
     if (error) { msg(error.code === "23505" ? `Já existe um abastecimento com ${fKm(km)} km.` : erroTexto("salvar", error), "bad"); return; }
-    resetForm(); msg(); nucleo.toast(eraEdicao ? "Abastecimento alterado." : "Abastecimento salvo."); carregar();
+    resetForm(); msg(); $("#novo-det").open = false; nucleo.toast(eraEdicao ? "Abastecimento alterado." : "Abastecimento salvo."); carregar();
   };
 
   $("#lista").addEventListener("click", async (ev) => {
@@ -349,7 +354,7 @@
       const e = entries.find((x) => x.id === ed.dataset.edit); if (!e) return; resetForm(); editingId = e.id;
       $("#f-km").value = e.km; $("#f-litros").value = toField(e.litros, 3); $("#f-total").value = toField(e.total, 2); $("#f-preco").value = toField(e.precoLitro, 3);
       $("#f-data").value = e.data; $("#f-cheio").checked = !!e.cheio; setComb(e.comb); $("#cancelar").hidden = false; $("#salvar").textContent = "Salvar alteração";
-      msg(`Editando o abastecimento de ${fData(e.data)}.`, "warn"); $("#novo").scrollIntoView({ behavior: "smooth", block: "start" });
+      msg(`Editando o abastecimento de ${fData(e.data)}.`, "warn"); $("#novo-det").open = true; $("#novo").scrollIntoView({ behavior: "smooth", block: "start" });
     }
     if (dl) {
       const id = dl.dataset.del;
